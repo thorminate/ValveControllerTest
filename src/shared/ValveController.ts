@@ -1,6 +1,7 @@
 export class ValveController {
 	owner?: Player;
 	highlight?: Highlight;
+	isLocked: boolean = false;
 	private position = 0;
 	private readonly min = -2;
 	private readonly max = 2;

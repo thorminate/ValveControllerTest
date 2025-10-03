@@ -12,6 +12,7 @@ for (const child of valvesFolder.GetChildren()) {
 		const inst = new ValveController();
 
 		const highlight = new Instance("Highlight");
+		highlight.Name = "ValveHighlight";
 		highlight.Adornee = child;
 		highlight.Parent = child;
 		highlight.FillColor = new Color3(1, 1, 1);
@@ -33,20 +34,43 @@ function updatePart(part: Part) {
 	part.CFrame = new CFrame(part.Position).mul(CFrame.Angles(0, angle, 0));
 }
 
+function updateHighlight(valveController: Part, state: ValveController) {
+	const highlight = valveController.WaitForChild("ValveHighlight") as Highlight;
+
+	if (state.owner) {
+		highlight.FillColor = Color3.fromRGB(255, 255, 255);
+		highlight.OutlineColor = Color3.fromRGB(255, 255, 255);
+		highlight.FillTransparency = 0.7;
+		highlight.OutlineTransparency = 0.5;
+		highlight.Enabled = true;
+	} else if (state.isLocked && state.getPosition() !== 0) {
+		highlight.FillColor = Color3.fromRGB(200, 160, 255);
+		highlight.OutlineColor = Color3.fromRGB(227, 207, 255);
+		highlight.FillTransparency = 0.7;
+		highlight.OutlineTransparency = 0.5;
+		highlight.Enabled = true;
+	} else {
+		highlight.FillColor = Color3.fromRGB(255, 255, 255);
+		highlight.OutlineColor = Color3.fromRGB(255, 255, 255);
+		highlight.FillTransparency = 0.7;
+		highlight.OutlineTransparency = 0.5;
+		highlight.Enabled = false;
+	}
+}
+
 switchEvent.OnServerEvent.Connect((player, ...args) => {
 	const [action, valve, value] = args as [string, Part, number?];
 
 	const state = valveStates.get(valve)!;
-	print("action", action, "value", value);
 
 	if (action === "startDrag" && typeIs(value, "number")) {
-		print("start drag");
 		if (!state.owner) {
 			state.owner = player;
 		}
 
 		state.setPosition(value);
-		state.highlight!.Enabled = true;
+		state.isLocked = false;
+		updateHighlight(valve, state);
 		updatePart(valve);
 	} else if (action === "update" && typeIs(value, "number")) {
 		if (state.owner !== player) return;
@@ -56,7 +80,9 @@ switchEvent.OnServerEvent.Connect((player, ...args) => {
 	} else if (action === "reset") {
 		if (state.owner !== player) return;
 
-		state.highlight!.Enabled = false;
+		state.isLocked = value === 1;
+		state.owner = undefined;
+		updateHighlight(valve, state);
 		if (value === 0) {
 			state.reset();
 			updatePart(valve);
