@@ -1,7 +1,8 @@
 import { ValveController } from "shared/ValveController";
 
 const ReplicatedStorage = game.GetService("ReplicatedStorage");
-const switchEvent = ReplicatedStorage.WaitForChild("SwitchDrag") as RemoteEvent;
+const switchFunc = ReplicatedStorage.WaitForChild("SwitchFunction") as RemoteFunction;
+const switchEvent = ReplicatedStorage.WaitForChild("SwitchEvent") as RemoteEvent;
 
 const valvesFolder = (game.Workspace.FindFirstChild("ValveControllers") as Folder)!;
 
@@ -35,7 +36,7 @@ function updatePart(part: Part) {
 }
 
 function updateHighlight(valveController: Part, state: ValveController) {
-	const highlight = valveController.WaitForChild("ValveHighlight") as Highlight;
+	const highlight = state.highlight!;
 
 	if (state.owner) {
 		highlight.FillColor = Color3.fromRGB(255, 255, 255);
@@ -50,44 +51,64 @@ function updateHighlight(valveController: Part, state: ValveController) {
 		highlight.OutlineTransparency = 0.5;
 		highlight.Enabled = true;
 	} else {
-		highlight.FillColor = Color3.fromRGB(255, 255, 255);
-		highlight.OutlineColor = Color3.fromRGB(255, 255, 255);
-		highlight.FillTransparency = 0.7;
-		highlight.OutlineTransparency = 0.5;
 		highlight.Enabled = false;
 	}
 }
 
-switchEvent.OnServerEvent.Connect((player, ...args) => {
-	const [action, valve, value] = args as [string, Part, number?];
+function reset(player: Player, state: ValveController, valve: Part, value?: number) {
+	state.isLocked = value === 1;
+	state.owner = undefined;
+	updateHighlight(valve, state);
+	if (value === 0) {
+		state.reset();
+		updatePart(valve);
+	}
 
+	state.owner = undefined;
+}
+
+switchFunc.OnServerInvoke = (player, ...args) => {
+	const [action, valve, value] = args as [string, Part, number?];
 	const state = valveStates.get(valve)!;
+	const distance = valve.Position.sub(player.Character?.PrimaryPart?.Position as Vector3).Magnitude;
+	if (distance > 35) return 2; // 2 = too far away
 
 	if (action === "startDrag" && typeIs(value, "number")) {
 		if (!state.owner) {
 			state.owner = player;
+		} else if (state.owner !== player) {
+			return 1; // 1 = not owner
 		}
 
 		state.setPosition(value);
 		state.isLocked = false;
 		updateHighlight(valve, state);
 		updatePart(valve);
-	} else if (action === "update" && typeIs(value, "number")) {
-		if (state.owner !== player) return;
+		return 0; // 0 = success
+	}
+};
+
+switchEvent.OnServerEvent.Connect((player, ...args) => {
+	const [action, valve, value] = args as [string, Part, number?];
+
+	const state = valveStates.get(valve)!;
+
+	const distance = valve.Position.sub(player.Character?.PrimaryPart?.Position as Vector3).Magnitude;
+
+	if (action === "update" && typeIs(value, "number")) {
+		if (distance > 35) {
+			reset(player, state, valve, 0);
+			return 2; // 2 = too far away
+		}
+		if (!state.owner || state.owner !== player) return 1; // 1 = not owner
 
 		state.setPosition(value);
 		updatePart(valve);
-	} else if (action === "reset") {
-		if (state.owner !== player) return;
+		return 0; // 0 = success
+	} else if (action === "reset" && typeIs(value, "number")) {
+		if (state.owner && state.owner !== player) return 1; // 1 = not owner
 
-		state.isLocked = value === 1;
-		state.owner = undefined;
-		updateHighlight(valve, state);
-		if (value === 0) {
-			state.reset();
-			updatePart(valve);
-		}
-
-		state.owner = undefined;
+		reset(player, state, valve, value);
+		return 0; // 0 = success
 	}
 });
