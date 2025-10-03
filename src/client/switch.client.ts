@@ -81,9 +81,8 @@ UserInputService.InputBegan.Connect((input, gameProcessed) => {
 
 			const projectedX = toHit.Dot(part.CFrame.RightVector) * signFactor;
 
-			if (projectedX > 0.2) state.basePosition = 1;
-			else if (projectedX < 0.2) state.basePosition = -1;
-			else state.basePosition = 0;
+			if (projectedX >= 0) state.basePosition = 1;
+			else if (projectedX < 0) state.basePosition = -1;
 
 			state.position = state.basePosition;
 
