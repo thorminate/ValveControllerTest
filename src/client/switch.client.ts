@@ -113,8 +113,8 @@ UserInputService.InputBegan.Connect((input, gameProcessed) => {
 				const state = controllerStates.get(valve)!;
 				flashHighlight(
 					valve,
-					Color3.fromRGB(200, 160, 255),
-					Color3.fromRGB(227, 207, 255),
+					Color3.fromRGB(227, 209, 255),
+					Color3.fromRGB(255, 255, 255),
 					0.2,
 					0.5,
 					0.2,
