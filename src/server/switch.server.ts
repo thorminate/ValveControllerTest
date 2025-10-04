@@ -71,9 +71,9 @@ switchFunc.OnServerInvoke = (player, ...args) => {
 	const [action, valve, value] = args as [string, Part, number?];
 	const state = valveStates.get(valve)!;
 	const distance = valve.Position.sub(player.Character?.PrimaryPart?.Position as Vector3).Magnitude;
-	if (distance > 35) return 2; // 2 = too far away
 
 	if (action === "startDrag" && typeIs(value, "number")) {
+		if (distance > 35) return 2; // 2 = too far away
 		if (!state.owner) {
 			state.owner = player;
 		} else if (state.owner !== player) {
@@ -85,6 +85,31 @@ switchFunc.OnServerInvoke = (player, ...args) => {
 		updateHighlight(valve, state);
 		updatePart(valve);
 		return 0; // 0 = success
+	} else if (action === "increment") {
+		if (distance > 35) return 2; // 2 = too far away
+		if (state.owner && state.owner !== player) return 1; // 1 = not owner
+
+		state.setPosition(state.getPosition() + 1);
+		if (state.getPosition() !== 0) {
+			state.isLocked = true;
+		}
+		updatePart(valve);
+		updateHighlight(valve, state);
+		return 0; // 0 = success
+	} else if (action === "decrement") {
+		if (distance > 35) return 2; // 2 = too far away
+		if (state.owner && state.owner !== player) return 1; // 1 = not owner
+
+		state.setPosition(state.getPosition() - 1);
+		if (state.getPosition() !== 0) {
+			state.isLocked = true;
+		}
+		updatePart(valve);
+		updateHighlight(valve, state);
+		return 0; // 0 = success
+	} else if (action === "getState") {
+		const state = valveStates.get(valve)!;
+		return state;
 	}
 };
 
